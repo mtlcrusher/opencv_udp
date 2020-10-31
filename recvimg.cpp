@@ -66,6 +66,7 @@ int main(int argc, char **argv)
   while(1)
   {
     receiveFrame(&sockfd, &clientaddr, &lenclientaddr, &frame, matSize, buffer);
+    n = sendto(sockfd, (const char *)"MANTAB", 6, MSG_CONFIRM, (const sockaddr *)&clientaddr, lenclientaddr);
     cv::imshow("received", frame);
     keyB = cv::waitKey(10);
     if(keyB == 'q')

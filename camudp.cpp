@@ -58,14 +58,6 @@ int main(int argc, char **argv)
   const char *hello = "Hello!";
   sockaddr_in serveraddr;
 
-  // // create timeout
-  // timeval tv;
-  // tv.tv_sec = 0;
-  // tv.tv_usec = 100000;
-  // if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
-  // {
-  //   perror("Timeout error");
-  // }
 
   // create socket
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -82,6 +74,15 @@ int main(int argc, char **argv)
   serveraddr.sin_port = htons(PORT);
 
   lenserveradr = sizeof(serveraddr);
+  
+  // create timeout
+  timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = 10000;
+  if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
+  {
+    perror("Timeout error");
+  }
 
   cv::VideoCapture camera(0);
   camera.set(3, 320);
@@ -108,6 +109,14 @@ int main(int argc, char **argv)
       break;
 
     sendFrame(&sockfd, &serveraddr, &lenserveradr, &framecont, matSize, dataSize);
+    memset((char *)buffer, 0, MAXLINE);
+    nRecv = recvfrom(sockfd, (char *)buffer, 6, MSG_WAITALL, (sockaddr *)&serveraddr, &lenserveradr);
+    if(memcmp((const char *)buffer, (const char *)"MANTAB", 6) == 0)
+    {
+      buffer[nRecv] = '\0';
+      fflush(stdout);
+      printf("From Server: %s\r", buffer);
+    }
   }
   camera.release();
   free(buffer);
