@@ -6,7 +6,7 @@
 
 #define PORT 8080
 #define MAXLINE 256
-#define SERVERADDR "127.0.0.1"
+#define SERVERADDR "192.168.1.100"
 
 int sendFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat *frame, const uint matSize, const size_t packetSize)
 {
@@ -35,6 +35,9 @@ int sendFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat *fr
     }
     totalbytes+=nSend;
   }
+  // send end frame
+  nSend = sendto(*socketfd, (const char *)"_END_", 5, MSG_CONFIRM, (const sockaddr *)address, *lenaddress);
+
   return totalbytes;
 }
 
@@ -92,7 +95,7 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  cv::namedWindow("frame", cv::WINDOW_AUTOSIZE | cv::WINDOW_OPENGL);
+  // cv::namedWindow("frame", cv::WINDOW_AUTOSIZE | cv::WINDOW_OPENGL);
   camera.read(frame);
   size_t matSize = frame.rows * frame.cols * frame.channels(); //230400
   size_t dataSize = atoi(argv[1]);
@@ -100,9 +103,19 @@ int main(int argc, char **argv)
   while(1)
   {
     camera.read(frame);
-    frame.copyTo(framecont);
     // cv::cvtColor(frame, framecont, cv::COLOR_BGR2GRAY);
-    cv::imshow("frame", frame);
+    // cv::imshow("frame", frame);
+
+    sendFrame(&sockfd, &serveraddr, &lenserveradr, &frame, matSize, dataSize);
+    // memset((char *)buffer, 0, MAXLINE);
+    // nRecv = recvfrom(sockfd, (char *)buffer, 6, MSG_WAITALL, (sockaddr *)&serveraddr, &lenserveradr);
+    // if(memcmp((const char *)buffer, (const char *)"MANTAB", 6) == 0)
+    // {
+    //   buffer[nRecv] = '\0';
+    //   fflush(stdout);
+    //   printf("From Server: %s\r", buffer);
+    // }
+
     keyB = cv::waitKey(10);
     if(keyB == 'q')
       break;
