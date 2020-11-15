@@ -9,9 +9,10 @@
 
 void receiveFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat *frame, const size_t sizeBuff, char *buffer)
 {
+  char *tempBuff = buffer;
   memset((char *)buffer, 0, sizeBuff);
-  int n = recvfrom(*socketfd, (char *)buffer, 7, MSG_WAITALL, (sockaddr *)address, lenaddress);
-  if(memcmp((const char *)buffer, (const char *)"_START_", 7) == 0)
+  int n = recvfrom(*socketfd, (char *)buffer, 2, MSG_WAITALL, (sockaddr *)address, lenaddress);
+  if(memcmp((const char *)buffer, (const char *)"<<", 2) == 0)
   {
     memset((char *)buffer, 0, sizeBuff);
     for(size_t i = 0; i < sizeBuff; i += n)
@@ -21,12 +22,13 @@ void receiveFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat
       // {
       //   printf("numBytes = %d\n", n);
       // }
+      tempBuff+=n;
     }
-    if(memcmp((buffer + (sizeBuff - 5)), "_END_", 5) == 0)
+    if(memcmp(tempBuff-2, ">>", 2) == 0)
     {
       fflush(stdout);
       printf("ok!\r");
-      memcpy((uchar *)frame->data, (char *)buffer, sizeBuff);
+      memcpy((uchar *)frame->data, (char *)buffer, sizeBuff-2);
     }
     // else
     //   memset(frame->data, 0, sizeBuff);
@@ -43,7 +45,7 @@ int main(int argc, char **argv)
   int sockfd;
   int n;
   uint lenclientaddr;
-  size_t sizeBuff = (matSize + 5)*sizeof(char);
+  size_t sizeBuff = (matSize + 2)*sizeof(char);
   char *buffer = (char *)malloc(sizeBuff);
   sockaddr_in clientaddr, serveraddr;
 
@@ -72,7 +74,7 @@ int main(int argc, char **argv)
   // create timeout
   timeval tv;
   tv.tv_sec = 0;
-  tv.tv_usec = 10000;
+  tv.tv_usec = 100000;
   if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
   {
     perror("Timeout error");
@@ -82,7 +84,7 @@ int main(int argc, char **argv)
   printf("ready!\n");
   while(1)
   {
-    receiveFrame(&sockfd, &clientaddr, &lenclientaddr, &frame, matSize, buffer);
+    receiveFrame(&sockfd, &clientaddr, &lenclientaddr, &frame, sizeBuff, buffer);
     cv::imshow("received", frame);
     keyB = cv::waitKey(5);
     if(keyB == 'q')

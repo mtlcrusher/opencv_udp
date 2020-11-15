@@ -6,12 +6,12 @@
 
 #define PORT 8080
 #define MAXLINE 256
-#define SERVERADDR "192.168.1.100"
+#define SERVERADDR "127.0.0.1"
 
 int sendFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat *frame, const uint matSize, const size_t packetSize)
 {
   // send start frame
-  int nSend = sendto(*socketfd, (const char *)"_START_", 7, MSG_CONFIRM, (const sockaddr *)address, *lenaddress);
+  int nSend = sendto(*socketfd, (const char *)"<<", 2, MSG_CONFIRM, (const sockaddr *)address, *lenaddress);
   if(nSend < 0)
   {
     printf("max packet size is 65507 Bytes!\n");
@@ -36,7 +36,7 @@ int sendFrame(int *socketfd, sockaddr_in *address, uint *lenaddress, cv::Mat *fr
     totalbytes+=nSend;
   }
   // send end frame
-  nSend = sendto(*socketfd, (const char *)"_END_", 5, MSG_CONFIRM, (const sockaddr *)address, *lenaddress);
+  nSend = sendto(*socketfd, (const char *)">>", 2, MSG_CONFIRM, (const sockaddr *)address, *lenaddress);
 
   return totalbytes;
 }
@@ -61,15 +61,6 @@ int main(int argc, char **argv)
   const char *hello = "Hello!";
   sockaddr_in serveraddr;
 
-  // // create timeout
-  // timeval tv;
-  // tv.tv_sec = 0;
-  // tv.tv_usec = 100000;
-  // if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
-  // {
-  //   perror("Timeout error");
-  // }
-
   // create socket
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd < 0)
@@ -85,6 +76,15 @@ int main(int argc, char **argv)
   serveraddr.sin_port = htons(PORT);
 
   lenserveradr = sizeof(serveraddr);
+
+  // create timeout
+  timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = 100000;
+  if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
+  {
+    perror("Timeout error");
+  }
 
   cv::VideoCapture camera(0);
   camera.set(3, 320);
@@ -103,24 +103,15 @@ int main(int argc, char **argv)
   while(1)
   {
     camera.read(frame);
+    frame.copyTo(framecont);
     // cv::cvtColor(frame, framecont, cv::COLOR_BGR2GRAY);
-    // cv::imshow("frame", frame);
-
-    sendFrame(&sockfd, &serveraddr, &lenserveradr, &frame, matSize, dataSize);
-    // memset((char *)buffer, 0, MAXLINE);
-    // nRecv = recvfrom(sockfd, (char *)buffer, 6, MSG_WAITALL, (sockaddr *)&serveraddr, &lenserveradr);
-    // if(memcmp((const char *)buffer, (const char *)"MANTAB", 6) == 0)
-    // {
-    //   buffer[nRecv] = '\0';
-    //   fflush(stdout);
-    //   printf("From Server: %s\r", buffer);
-    // }
-
-    keyB = cv::waitKey(10);
-    if(keyB == 'q')
-      break;
 
     sendFrame(&sockfd, &serveraddr, &lenserveradr, &framecont, matSize, dataSize);
+
+    cv::imshow("frame", frame);
+    keyB = cv::waitKey(5);
+    if(keyB == 'q')
+      break;
   }
   camera.release();
   free(buffer);
