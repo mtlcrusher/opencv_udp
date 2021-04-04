@@ -8,7 +8,7 @@ int main(int argc, char **argv)
   int sockfd;
   int bindStatus;
   int n;
-  uint len;
+  socklen_t len;
   char *buffer = (char *)malloc(MAXLINE*sizeof(char));
   const char *hello = "Server-kun!";
   struct sockaddr_in serveraddr, clientaddr;
